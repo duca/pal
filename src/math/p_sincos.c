@@ -14,12 +14,13 @@
  * @param z     Pointer to cosine output vector
  *
  * @param n     Size of 'a' and 'c' vector.
- *
+ * 
  * @return      None
  *
  */
-#include <math.h>
-void p_sincos_f32(float *a, float *c, float *z, int n)
+void PSYM(p_sincos)(const PTYPE *a, PTYPE *c, PTYPE *z,
+                  int n)
 {
-    /* TODO: Implement me */
+    PSYM(p_sin)(a, c, n);
+    PSYM(p_cos)(a, z, n);
 }

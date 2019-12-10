@@ -5,3 +5,7 @@
 #include "pal_dsp.h"
 #include "pal_image.h"
 #include "pal_fft.h"
+
+#ifdef PAL_SOURCE
+# include "common.h"
+#endif

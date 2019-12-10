@@ -13,12 +13,13 @@
  * @return      None
  *
  */
-#include <math.h>
-void p_log10_f32(float *a, float *c, int n)
+void PSYM(p_log10)(const PTYPE *a, PTYPE *c, int n)
 {
-
     int i;
+
+    PSYM(p_ln)(a, c, n);
     for (i = 0; i < n; i++) {
-        *(c + i) = log10f(*(a + i));
+        // log10(x) = ln(x) / ln(10)
+        c[i] *= M_DIV_LN10;
     }
 }

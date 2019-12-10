@@ -1,0 +1,14 @@
+# src/base/devices
+src_base_devices_libdevices_la_SOURCES = src/base/devices/devices.h
+src_base_devices_libdevices_la_LIBADD  =
+
+noinst_LTLIBRARIES += src/base/devices/libdevices.la
+
+if HOST_IS_POSIX
+include src/base/devices/posix/Makemodule.am
+endif
+
+if HOST_IS_EPIPHANY
+include src/base/devices/epiphany/Makemodule.am
+endif
+

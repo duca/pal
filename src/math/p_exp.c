@@ -1,9 +1,10 @@
 #include <pal.h>
 
+#include "p_exp.h"
+
 /**
  *
- * Calculate exponent (e^a), where e is the base of the natural logarithm
- * (2.71828.)
+ * Calculate the exponent e^a where e is Euler's number (2.71...).
  *
  * @param a     Pointer to input vector
  *
@@ -14,12 +15,11 @@
  * @return      None
  *
  */
-#include <math.h>
-void p_exp_f32(float *a, float *c, int n)
+void PSYM(p_exp)(const PTYPE *a, PTYPE *c, int n)
 {
 
     int i;
     for (i = 0; i < n; i++) {
-        *(c + i) = expf(*(a + i));
+        c[i] = _p_exp(a[i]);
     }
 }

@@ -8,7 +8,7 @@
  *
  * @param c           Pointer to output scalar
  *
- * @param[out] index  Pointer to return index of max
+ * @param[out] index  Pointer to return index of max (note that if there are multiple cells with max, the first index will be returned)
  *
  * @param n      Size of 'a' vector.
  *
@@ -16,14 +16,16 @@
  *
  */
 
-void p_max_f32(float *a, float *c, int *index, int n)
+void PSYM(p_max)(const PTYPE *a, PTYPE *c, int *index, int n)
 {
-    int i;
-    *c = 3.40282346638528860e+38;
-    for (i = 0; i < n; i++) {
-        if (*(a + i) > *c) {
-            *(index) = i;
-            *c = *(a + i);
-        }
+    if (n==0) return; // only do work if there are elements
+    int pos = 0;
+    
+    for (int i = 1; i < n; i++) {
+        int greater = (*(a + i) > *(a + pos));
+        pos = greater * i + (1 - greater) * pos;
     }
+    
+    *c = *(a + pos);
+    *index = pos;
 }

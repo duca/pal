@@ -7,22 +7,26 @@
  * LA3 =  | -1  4 -1 |
  *        |  0 -1  0 |
  *
- * @param x    Pointer to input image, a 2D array of size 'rows' x 'cols'
+ * Notes: cols must be a multiple of 2
  *
- * @param rows Number of rows in input image
+ * @param x     Pointer to input image, a 2D array of size 'rows' x 'cols'
  *
- * @param cols Number of columns in input image
+ * @param r     Pointer to output image
  *
- * @param r    Pointer to output image
+ * @param rows  Number of rows in input image
  *
+ * @param cols  Number of columns in input image
+ *
+ * @return      None
  *
  */
-void p_laplace3x3_f32(float *x, int rows, int cols, float *r)
+void p_laplace3x3_f32(const float *x, float *r, int rows, int cols)
 {
 
     int ia, ja;
     float LA;
-    float *px, *pr;
+    const float *px;
+    float *pr;
 
     px = x;
     pr = r;

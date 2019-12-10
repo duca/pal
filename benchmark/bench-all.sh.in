@@ -1,0 +1,11 @@
+#!/bin/bash
+
+abs_top_builddir=@abs_top_builddir@
+
+all=$(find ${abs_top_builddir}/benchmark \
+    \( -name "bench_*" -and -executable -and -type f \) | \
+    grep -v "\.libs\|\.deps" | sort)
+for bench in ${all}; do
+    ${abs_top_builddir}/benchmark/runbench ${bench}
+done
+

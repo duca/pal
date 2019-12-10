@@ -14,12 +14,12 @@
  *
  */
 
-void p_sum_f32(float *a, float *c, int n)
+void PSYM(p_sum)(const PTYPE *a, PTYPE *c, int n)
 {
+    PTYPE tmp = PCONST(0.0);
 
-    int i = 0;
-    *c = 0.0f;
-    for (i = 0; i < n; i++) {
-        *c += *(a + i);
+    for (; n > 0; n--) {
+        tmp += *(a++);
     }
+    *c = tmp;
 }

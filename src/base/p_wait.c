@@ -15,11 +15,10 @@
 
 int p_wait(p_team_t team)
 {
-    struct team *pteam = (struct team *) team;
-    printf("Running p_wait\n");
+    struct team *pteam = p_to_team(team);
 
-    if (p_ref_is_err(team))
-        return -EINVAL;
+    if (p_error(pteam))
+        return p_error(pteam);
 
     return pteam->dev->dev_ops->wait(pteam->dev, pteam);
 }

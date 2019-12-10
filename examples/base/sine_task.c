@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <pal_math.h>
+#include <pal.h>
 
 int main()
 {

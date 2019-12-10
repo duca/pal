@@ -16,12 +16,13 @@
  * @return      None
  *
  */
-void p_dot_f32(float *a, float *b, float *c, int n)
+void PSYM(p_dot)(const PTYPE *a, const PTYPE *b, PTYPE *c, int n )
 {
-
+    PTYPE tmp = PCONST(0.0);
     int i;
-    *c = 0.0f;
+
     for (i = 0; i < n; i++) {
-        *c += *(a + i) * *(b + i);
+        tmp += *(a + i) * *(b + i);
     }
+    *c = tmp;
 }

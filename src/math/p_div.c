@@ -16,7 +16,7 @@
  *
  */
 
-void p_div_f32(float *a, float *b, float *c, int n)
+void PSYM(p_div)(const PTYPE *a, const PTYPE *b, PTYPE *c, int n)
 {
 
     int i;

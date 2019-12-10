@@ -13,13 +13,13 @@
  * @return      None
  *
  */
-void p_mean_f32(float *a, float *c, int n)
+void PSYM(p_mean)(const PTYPE *a, PTYPE *c, int n)
 {
+    PTYPE tmp = PCONST(0.0);
+    int i;
 
-    int i = 0;
-    *c = 0.0f;
     for (i = 0; i < n; i++) {
-        *c += *(a + i);
+        tmp += *(a + i);
     }
-    *c = *c / n;
+    *c = tmp / n;
 }

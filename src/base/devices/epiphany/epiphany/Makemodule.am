@@ -1,0 +1,4 @@
+noinst_LTLIBRARIES  += src/base/devices/epiphany/epiphany/libdevice.la
+src_base_devices_epiphany_epiphany_libdevice_la_SOURCES = \
+src/base/devices/epiphany/epiphany/device.c               \
+src/base/devices/epiphany/epiphany/dev_epiphany.h

@@ -3,9 +3,16 @@
 #include "pal_base.h"
 #include "pal_base_private.h"
 
-int p_mutex_lock(p_mutex_t *mp)
+int p_mutex_lock(p_mutex_t *mutex)
 {
-    /*PLACE CODE HERE*/
+    struct team *pteam;
 
-    return (0);
+    if (p_error(mutex))
+        return p_error(mutex);
+
+    pteam = p_to_team(mutex->team);
+    if (p_error(pteam))
+        return p_error(pteam);
+
+    return pteam->dev->dev_ops->mutex_lock(pteam, mutex);
 }

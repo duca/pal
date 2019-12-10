@@ -10,9 +10,13 @@
 
 # Libraries
 *.lib
+.libs/
 *.a
 *.la
 *.lo
+
+# Static Usage
+*.su
 
 # Shared objects (inc. Windows DLLs)
 *.dll
@@ -31,11 +35,68 @@
 # Emacs
 *~
 
+# Vim
+*.swp
+
 # Autotools
 /autom4te.cache
 Makefile.in
 /configure
 /config.h.in
-/config
 /aclocal.m4
 /config.h
+/stamp-h1
+/missing
+/depcomp
+/config.log
+/config.status
+**/.deps/
+**/Makefile
+/libtool
+**/.dirstamp
+/config/ar-lib
+/config/compile
+/config/config.guess
+/config/config.sub
+/config/depcomp
+/config/install-sh
+/config/ltmain.sh
+/config/missing
+/config/test-driver
+# Libtools
+/config/m4/libtool.m4
+/config/m4/lt~obsolete.m4
+/config/m4/ltoptions.m4
+/config/m4/ltsugar.m4
+/config/m4/ltversion.m4
+
+# Erlang
+*.beam
+
+# Gold test headers (generated from .dat files)
+*.gold.h
+
+# Test outputs
+/tests/math/rangen
+/tests/runtest
+/tests/*.log
+/tests/*.sum
+/tests/*/check_p_*
+!/tests/*/check_p_*.c
+/tests/*/*.log
+
+# Reports
+/reports/
+
+# Doc
+/doc/Doxyfile
+
+# Example binaries
+/examples/base/hello_task
+/examples/base/median_task
+/examples/base/mode_task
+/examples/base/simple_example
+/examples/base/sine_task
+/examples/base/sort_task
+/examples/image/filters
+/examples/image/harris

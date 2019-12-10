@@ -2,29 +2,34 @@
 
 /**
  *
- * Finds the minimum value in vector 'a'. Returns the max value and the index
- * of the maximum value.
+ * Finds the minimum value in vector 'a'. Returns the min value and the index
+ * of the minimum value.
  *
  * @param      a      Pointer to input vector
  *
  * @param      c      Pointer to output scalar
  *
- * @param[out] index  Pointer to return index of max
+ * @param[out] index  Pointer to return index of min
  *
  * @param n           Size of 'a' vector.
- *
+ * 
  * @return            None
  *
  */
-void p_min_f32(float *a, float *c, int *index, int n)
+void PSYM(p_min)(const PTYPE *a, PTYPE *c, int *index, int n)
 {
+    PTYPE min;
+    int i, pos;
 
-    int i;
-    *c = 0.0f; // FIX: insert max value
-    for (i = 0; i < n; i++) {
-        if (*(a + i) < *c) {
-            *(index) = i;
-            *c = *(a + i);
+    min = *a;
+    pos = 0;
+
+    for (i = 1; i < n; i++) {
+        if (*(a + i) < min) {
+            pos = i;
+            min = *(a + i);
         }
     }
+    *c = min;
+    *index = pos;
 }

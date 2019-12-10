@@ -1,4 +1,5 @@
 #include <pal.h>
+#include <math.h>
 
 /**
  *
@@ -15,9 +16,10 @@
  *
  * @return      None
  *
+ * @todo        Implement without using libm
+ *
  */
-#include <math.h>
-void p_atan2_f32(float *a, float *b, float *c, int n)
+void PSYM(p_atan2)(const PTYPE *a, const PTYPE *b, PTYPE *c, int n)
 {
 
     int i;

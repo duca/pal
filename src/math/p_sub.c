@@ -11,12 +11,12 @@
  * @param c     Pointer to output vector
  *
  * @param n     Size of 'a' and 'c' vector.
- *
+ * 
  * @return      None
  *
  */
 
-void p_sub_f32(float *a, float *b, float *c, int n)
+void PSYM(p_sub)(const PTYPE *a, const PTYPE *b, PTYPE *c, int n)
 {
 
     int i;

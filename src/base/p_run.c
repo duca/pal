@@ -4,7 +4,9 @@
  *
  * Runs(launches) the program 'prog' on all of the members of 'team'.
  *
- * @param prog      Pointer to the program to run that was loaded with p_load();
+ * @param prog      Pointer to the program to run that was loaded with p_load()
+ *
+ * @param function  Name of function within 'prog' to run
  *
  * @param team      Team to run with.
  *
@@ -12,7 +14,7 @@
  *
  * @param size      Total number of processors within team to run
  *
- * @param nargs      Number of arguments to be supplied to 'function'
+ * @param nargs     Number of arguments to be supplied to 'function'
  *
  * @param args      An array of pointers to function arguments
  *
@@ -31,25 +33,35 @@
 #include "pal_base.h"
 #include "pal_base_private.h"
 
-int p_run(p_prog_t prog, p_team_t team, int start, int size, int nargs,
-        char *args[], int flags)
+int p_run(p_prog_t prog, const char *function, p_team_t team,
+          int start, int count, int nargs, const p_arg_t *args, int flags)
 {
-    int err;
+    int err = 0;
     struct team *pteam = (struct team *) team;
-    struct dev *pdev = pteam->dev;
     struct prog *pprog = (struct prog *) prog;
+    struct dev_ops *ops = pteam->dev->dev_ops;
 
     if (p_ref_is_err(prog) || p_ref_is_err(team))
         return -EINVAL;
 
-    err = pdev->dev_ops->run(pdev, pteam, pprog, start, size, nargs, args,
-            flags);
+    if (!(flags & P_RUN_PREPARED)) {
+        if (nargs > P_RUN_MAX_ARGS)
+            return -E2BIG;
 
+        err = ops->load(pteam, start, count, pprog, function, nargs, args);
+        if (err)
+            return err;
+    }
+
+    if (flags & P_RUN_PREPARE)
+        return 0;
+
+    err = ops->start(pteam, start, count);
     if (err)
         return err;
 
-    if (!(flags & 1)) // Bogus non blocking check
-        return p_wait((p_team_t) team); // Inconsistent with flags to this function
+    if (!(flags & P_RUN_NONBLOCK))
+        err = p_wait(pteam);
 
-    return 0;
+    return err;
 }

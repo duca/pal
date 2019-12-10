@@ -1,7 +1,19 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-
+# Detect if we're top level configure. If so, we should configure subdirs.
+m4_divert_text([PARSE_ARGS],
+if test -n "$PAL_IS_SUBDIR"; then
+  pal_is_subdir=:
+  pal_is_topdir=false
+else
+  PAL_IS_SUBDIR=:
+  export PAL_IS_SUBDIR
+  pal_is_subdir=false
+  pal_is_topdir=:
+  ac_subdirs_all="host devices/epiphany"
+fi
+)
 
 # Needed for autoconf 2.64
 m4_pattern_allow([AC_CHECK_HEADER_STDBOOL])
@@ -34,18 +46,31 @@ AM_SILENT_RULES([yes])
 AC_PROG_CXX
 AC_PROG_AWK
 AC_PROG_CC_C99
+AX_PROG_CC_FOR_BUILD # Check for native compiler (cross-compilation)
 AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
+AM_PROG_CC_C_O
 AM_PROG_AR
+
+
+AX_CHECK_COMPILE_FLAG([-fstack-usage],
+                      [AX_APPEND_FLAG([-fstack-usage])],
+                      [AC_MSG_WARN([-fstack-usage not supported, Some reports will be incomplete.])
+                      ])
 
 LT_INIT
 
 # Checks for libraries.
 
 # Checks for header files.
-AC_CHECK_HEADERS([fcntl.h fenv.h float.h inttypes.h limits.h stddef.h stdint.h stdlib.h string.h strings.h sys/ioctl.h sys/time.h unistd.h])
+AC_CHECK_HEADERS([fcntl.h fenv.h float.h inttypes.h limits.h stddef.h stdint.h stdlib.h string.h strings.h sys/ioctl.h time.h unistd.h])
+AC_CHECK_HEADER([mach/mach_time.h],
+  [AC_DEFINE([HAVE_MACH_TIME], [1],
+    [Define to 1 if you have <mach/mach_time.h>])])
+# Epiphany headers
+AC_CHECK_HEADERS([e-lib.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL
@@ -69,113 +94,127 @@ AC_FUNC_FORK
 AC_FUNC_MMAP
 AC_CHECK_FUNCS([bzero fesetround floor gettimeofday memset modf munmap pow rint sqrt strdup strerror strtol])
 
+# Older versions of libc need -lrt for clock_gettime()
+AC_CHECK_FUNCS(clock_gettime, [], [
+  AC_CHECK_LIB(rt, clock_gettime, [
+    AC_DEFINE(HAVE_CLOCK_GETTIME, [1], [Have clock_gettime])
+    BENCHMARK_LIBS="$BENCHMARK_LIBS -lrt"
+  ])
+])
+AC_SUBST([BENCHMARK_LIBS])
+
+AM_CONDITIONAL([PAL_IS_SUBDIR],
+               [$pal_is_subdir])
+AM_CONDITIONAL([PAL_IS_TOPDIR],
+               [$pal_is_topdir])
+
 AC_CONFIG_FILES([Makefile
-                 include/Makefile
-                 src/Makefile
-                 src/base/Makefile
-                 src/base/devices/Makefile
-                 src/base/devices/epiphany/Makefile
-                 src/dsp/Makefile
-                 src/fft/Makefile
-                 src/image/Makefile
-                 src/math/Makefile
-                 examples/Makefile
-                 examples/base/Makefile
-                 tests/Makefile
-                 doc/Makefile])
+                 benchmark/bench-all.sh
+                 Makemodule.host.am])
+
+# Configure host
+if $pal_is_topdir; then
+  AX_CONFIG_DIR([host], [..])
+fi
 
 # Epiphany host support
 AM_CONDITIONAL([HOST_IS_EPIPHANY],
                [test "x$host_cpu" = "xepiphany"])
+AS_IF([test "x$host_cpu" = "xepiphany"],
+      AC_DEFINE([HOST_IS_EPIPHANY], [1], [Host is Epiphany]))
+
+# ... assume POSIX compatible otherwise
+AM_CONDITIONAL([HOST_IS_POSIX],
+               [test "x$host_cpu" != "xepiphany"])
+AS_IF([test "x$host_cpu" != "xepiphany"],
+      AC_DEFINE([HOST_IS_POSIX], [1], [Host is POSIX]))
+
+
+AS_IF([test "x$host_cpu" = "xepiphany"],
+      [
+        # If linker script is NOT specified in LDFLAGS...
+        AS_IF([AS_CASE([$LDFLAGS], [*-T*], [false], [true])],
+              [
+                # Provide internal/fast so individual programs can override.
+                AX_APPEND_LINK_FLAGS([-Wl,-Tinternal.ldf \
+                                      -Wl,-T$EPIPHANY_HOME/bsps/current/internal.ldf],
+                                      [EPIPHANY_INTERNAL_LDFLAGS])
+
+                AX_APPEND_LINK_FLAGS([-Wl,-Tfast.ldf \
+                                      -Wl,-T$EPIPHANY_HOME/bsps/current/fast.ldf],
+                                      [EPIPHANY_FAST_LDFLAGS])
+
+                # Default to internal.ldf
+                AX_APPEND_LINK_FLAGS([-Wl,-Tinternal.ldf \
+                                      -Wl,-T$EPIPHANY_HOME/bsps/current/internal.ldf],
+                                      [AM_LDFLAGS])
+
+              ])
+
+        AS_CASE([$LDFLAGS], [*-T*], [ : ],
+                [
+                  AS_IF([test "x$EPIPHANY_INTERNAL_LDFLAGS" = "x" -o \
+                              "x$EPIPHANY_FAST_LDFLAGS" = "x"],
+                        [AC_MSG_ERROR([No linker script found. You need to either set EPIPHANY_HOME or provide one/set search path in LDFLAGS])])
+
+                ])
+      ])
+
+AC_SUBST([EPIPHANY_INTERNAL_LDFLAGS])
+AC_SUBST([EPIPHANY_FAST_LDFLAGS])
+
+# Epiphany simulator support
+AC_ARG_ENABLE([device_epiphany_sim],
+              AS_HELP_STRING([--enable-device-epiphany-sim],
+                             [Enable Epiphany device simulator]))
+AS_IF([test "x$enable_device_epiphany_sim" = "xyes"],
+      AC_CHECK_HEADERS([esim.h], break;, enable_device_epiphany_sim=no)
+      AC_CHECK_LIB(esim, es_init, break;, enable_device_epiphany_sim=no))
+AS_IF([test "x$enable_device_epiphany_sim" = "xyes"],
+      enable_device_epiphany="yes"
+      AC_DEFINE([ENABLE_DEV_EPIPHANY_SIM],
+                [1],
+                [Epiphany device simulator support]))
+AM_CONDITIONAL([ENABLE_DEV_EPIPHANY_SIM],
+               [test "x$enable_device_epiphany_sim" = "xyes"])
 
 # Epiphany device support
 AC_ARG_ENABLE([device_epiphany],
               AS_HELP_STRING([--enable-device-epiphany],
                              [Enable Epiphany device]))
+AS_IF([test "x$enable_device_epiphany" != "xno" -a "x$host_cpu" = "xepiphany"],
+      [enable_device_epiphany=yes])
 AM_CONDITIONAL([ENABLE_DEV_EPIPHANY],
                [test "x$enable_device_epiphany" = "xyes"])
-# Ensure Epiphany toolchain, libraries, and headers are present.
-# Dependency on Epiphany libs/headers will go away later, this will do for now.
 AS_IF([test "x$enable_device_epiphany" = "xyes"],
-      [AC_MSG_NOTICE([checking for Epiphany toolchain...])
-       AC_CHECK_PROG(have_epiphany_ar,      epiphany-elf-ar,      yes)
-       AC_CHECK_PROG(have_epiphany_cc,      epiphany-elf-gcc,     yes)
-       AC_CHECK_PROG(have_epiphany_cxx,     epiphany-elf-g++,     yes)
-       AC_CHECK_PROG(have_epiphany_ld,      epiphany-elf-ld,      yes)
-       AC_CHECK_PROG(have_epiphany_nm,      epiphany-elf-nm,      yes)
-       AC_CHECK_PROG(have_epiphany_objdump, epiphany-elf-objdump, yes)
-       AC_CHECK_PROG(have_epiphany_ranlib,  epiphany-elf-ranlib,  yes)
-       AC_CHECK_PROG(have_epiphany_strip,   epiphany-elf-strip,   yes)
+      AC_DEFINE([ENABLE_DEV_EPIPHANY],
+                [1],
+                [Epiphany device support]))
 
-       AS_IF([test "x$have_epiphany_ar"      = "xyes" -a \
-                   "x$have_epiphany_cc"      = "xyes" -a \
-                   "x$have_epiphany_cxx"     = "xyes" -a \
-                   "x$have_epiphany_ld"      = "xyes" -a \
-                   "x$have_epiphany_nm"      = "xyes" -a \
-                   "x$have_epiphany_objdump" = "xyes" -a \
-                   "x$have_epiphany_ranlib"  = "xyes" -a \
-                   "x$have_epiphany_strip"   = "xyes"],
-             AC_SUBST([EPIPHANY_AR],      [epiphany-elf-ar])
-             AC_SUBST([EPIPHANY_CC],      [epiphany-elf-gcc])
-             AC_SUBST([EPIPHANY_CPP],     ["epiphany-elf-gcc -E"])
-             AC_SUBST([EPIPHANY_CXX],     [epiphany-elf-g++])
-             AC_SUBST([EPIPHANY_CXXCPP],  ["epiphany-elf-g++ -E"])
-             AC_SUBST([EPIPHANY_LD],      [epiphany-elf-ld])
-             AC_SUBST([EPIPHANY_NM],      ["epiphany-elf-nm -B"])
-             AC_SUBST([EPIPHANY_OBJDUMP], [epiphany-elf-objdump])
-             AC_SUBST([EPIPHANY_RANLIB],  [epiphany-elf-ranlib])
-             AC_SUBST([EPIPHANY_STRIP],   [epiphany-elf-strip]),
-             [AC_MSG_ERROR([Epiphany toolchain not found])])
-       AC_MSG_NOTICE([Epiphany toolchain found])
+AS_IF([test "x$enable_device_epiphany" = "xyes" -a "x$host_cpu" != "xepiphany"],
+      [build_device_epiphany=yes])
+AM_CONDITIONAL([BUILD_DEV_EPIPHANY],
+               [test "x$build_device_epiphany" = "xyes"])
+if $pal_is_topdir; then
+  AS_IF([test "x$build_device_epiphany" = "xyes"],
+        [PAL_CONFIG_DEVICE([epiphany], [epiphany-elf])])
+fi
 
+AC_ARG_ENABLE([benchmark], AS_HELP_STRING([--disable-benchmark], [Disable building benchmark binaries]))
+AM_CONDITIONAL([ENABLE_BENCHMARK], [test "x$enable_benchmark" != "xno"])
 
-       AC_MSG_NOTICE([checking for Epiphany libraries...])
-       lib_help_str="You probably need to pass in:
-./configure LDFLAGS\"-L/opt/adapteva/esdk/tools/host.armv7l/lib\" ..."
-       AC_CHECK_LIB([e-hal], e_init, [],
-                    [AC_MSG_ERROR([$lib_help_str])])
+AC_ARG_ENABLE([examples], AS_HELP_STRING([--disable-examples], [Disable building examples]))
+AM_CONDITIONAL([ENABLE_EXAMPLES], [test "x$enable_examples" != "xno"])
 
-       AC_CHECK_LIB([e-loader], e_load_group, [],
-                    [AC_MSG_ERROR([$lib_help_str])])
-       AC_MSG_NOTICE([Epiphany libraries found])
-
-
-       AC_MSG_NOTICE([checking for Epiphany headers...])
-       inc_help_str="You probably need to pass in:
-./configure CPPFLAGS\"-I/opt/adapteva/esdk/tools/host.armv7l/include\" ..."
-       AC_CHECK_HEADER([e-hal.h], [], [AC_MSG_ERROR([$inc_help_str])])
-
-       AC_CHECK_HEADER([e-loader.h], [], [AC_MSG_ERROR([$inc_help_str])])
-       AC_MSG_NOTICE([Epiphany headers found])
-
-
-       #AC_SUBST([ENABLE_DEV_EPIPHANY], [yes])
-       AC_DEFINE([ENABLE_DEV_EPIPHANY], [1], [Epiphany device support])
-       ])
-
-# Unit testing
-PKG_CHECK_MODULES(CHECK, [check >= 0.9.4],
-                  [have_check="yes"],
-                  [have_check="no"])
-AM_CONDITIONAL(HAVE_CHECK, [test "x${have_check}" = "xyes"])
-AC_SUBST(CHECK_CFLAGS)
-AC_SUBST(CHECK_LIBS)
 AC_ARG_ENABLE([tests],
               AS_HELP_STRING([--disable-tests],
                              [Disable building unit tests]))
 
+# Unit testing
 AC_MSG_CHECKING([whether to build unit tests])
-AS_IF([test "x${enable_tests}" = "xyes"],
-      [AS_IF([test "x${have_check}" != "xyes"],
-             [AC_MSG_RESULT([error])
-             AC_MSG_ERROR([Cannot build unit tests, check not installed])])])
-AS_IF([test "x${enable_tests}" = "x"],
-      [AS_IF([test "x${have_check}" != "xyes"], [enable_tests="no"])])
-
 AS_IF([test "x${enable_tests}" = "xno"],
       [AC_MSG_RESULT([no])],
       [AC_MSG_RESULT([yes])])
-
 AM_CONDITIONAL(ENABLE_TESTS, [test "x${enable_tests}" != "xno"])
 
 # Documentation
@@ -203,8 +242,19 @@ AS_IF([test "x${enable_doc}" = "xno"],
 
 AM_CONDITIONAL(ENABLE_DOC, [test "x${enable_doc}" != "xno"])
 
+# Define the --enable-assert command-line option
+AC_ARG_ENABLE(assert,
+  [AS_HELP_STRING([--enable-assert], [Build with assertions enabled])],
+  [enable_assert=yes], [enable_assert=no])
+# Set any CPPFLAGS specific to debugging
+AS_IF([test "x$enable_assert" = "xyes"],
+  [AC_SUBST(assert_CPPFLAGS, [''])],
+  [AC_SUBST(assert_CPPFLAGS, ['-DNDEBUG'])])
 
 # Easiest way to include header files globally
-AC_SUBST([AM_CPPFLAGS], ['-I$(top_srcdir)/include -I$(top_builddir)'])
+AC_SUBST([AM_CPPFLAGS],
+  ['-I$(top_srcdir)/include -I$(top_builddir) $(assert_CPPFLAGS) -DPAL_SOURCE'])
+
+AC_SUBST([AM_LDFLAGS])
 
 AC_OUTPUT
